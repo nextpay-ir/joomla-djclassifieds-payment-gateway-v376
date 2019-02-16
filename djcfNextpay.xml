@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="plugin" group="djclassifiedspayment"  method="upgrade">
+	<name>DJ Classifieds Nextpay payment</name>
+	<author>Nextpay.ir</author>
+	<creationDate>February 2019</creationDate>
+	<copyright>Copyright (C) 2019 Nextpay.ir LTD, All rights reserved.</copyright>
+	<license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
+    	<authorEmail>info@nextpay.org</authorEmail>
+	<authorUrl>https://nextpay.ir</authorUrl>
+	<version>3.7.5</version>
+	<description>DJ Classifieds NextPay payment</description>
+	<files>
+		<filename plugin="djcfNextpay">djcfNextpay.php</filename>
+		<folder>djcfNextpay</folder>
+	</files>
+	<languages>
+		<language tag="en-GB">en-GB.plg_djclassifiedspayment_djcfNextpay.ini</language>
+	</languages>
+	<config>
+		<fields name="params">
+			<fieldset name="basic">
+				<field name="api_key" type="text" size="50" default="" label="api key [Merchant Code]" description="Nextpay's api key gateway"/>
+				<field name="currency_code" type="list" default="USD" label="Currency code" description="Currency Code Eg.=IRR" >
+					<option value="IRR">ریال</option>
+					<option value="TOMAN">تومان</option>
+				</field>
+			</fieldset>
+		</fields>
+	</config>
+</extension>
