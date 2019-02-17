@@ -80,6 +80,7 @@ class plgdjclassifiedspaymentdjcfNextpay extends JPlugin
 	}
 	function _notify_url()
 	{
+	    
 		$db = JFactory::getDBO();
 		$par = JComponentHelper::getParams( 'com_djclassifieds' );
 		$user	= JFactory::getUser();
@@ -96,7 +97,7 @@ class plgdjclassifiedspaymentdjcfNextpay extends JPlugin
 		if ($this->params['currency_code'] == 'IRR'){
             $amount = $amount / 10;
 		}
-
+        
 		try{
 			$order_id = $input->post->get('order_id')? $input->getString('order_id') : $_POST['order_id'];
 			$trans_id = $input->post->get('trans_id')? $input->getString('trans_id') : $_POST['trans_id'];
@@ -110,13 +111,17 @@ class plgdjclassifiedspaymentdjcfNextpay extends JPlugin
 				'order_id' => $order_id,
 				'trans_id' => $trans_id
 			);
+			
 
 
 			$soap_client = new SoapClient("https://api.nextpay.org/gateway/verify.wsdl", array('encoding' => 'UTF-8'));
 			$res = $soap_client->PaymentVerification($params);
+			
 
 			$res = $res->PaymentVerificationResult;
 			$code = -1000;
+			$status=='Failed';
+			$paymentstatus=0;
 
 			if ($res != "" && $res != NULL && is_object($res)) {
 			    $code = $res->code;
@@ -125,11 +130,16 @@ class plgdjclassifiedspaymentdjcfNextpay extends JPlugin
 			if (intval($code) == 0) 
 			{
                 DJClassifiedsPayment::completePayment($id, JRequest::getVar('mc_gross'), $trans_id);
+                $message = JText::_("PLG_DJCFNEXTPAY_PAYMENT_SUCCEED") . '<br>' .  JText::_("PLG_DJCFNEXTPAY_PAYMENT_REF_ID") . $trans_id;
+				$app->redirect($messageUrl, $message, 'message');
 			}else{
-				$query = "UPDATE #__djcf_payments SET status='".$code."',transaction_id='".$trans_id."' "
+				$query = "UPDATE #__djcf_payments SET status='".$status."',transaction_id='".$trans_id."' "
 						."WHERE id=".$id." AND method='djcfNextpay'";					
 				$db->setQuery($query);
-				$db->query();	
+				$db->query();
+				$message = JText::_("PLG_DJCFNEXTPAY_AFTER_FAILED_MSG") . '<br>' .  JText::_("PLG_DJCFNEXTPAY_PAYMENT_REF_ID") . $trans_id;
+				$app->redirect($messageUrl, $message, 'warning');
+				exit;
 			}
 			
         } catch (Exception $e) {
@@ -194,7 +204,7 @@ class plgdjclassifiedspaymentdjcfNextpay extends JPlugin
 		echo JText::_('PLG_DJCFNEXTPAY_REDIRECTING_PLEASE_WAIT');
 		
 		$order_id = $pdetails['item_id'];
-		$amount = $pdetails['amount'];
+		$amount = intval($pdetails['amount']);
 		if ($this->params['currency_code'] == 'IRR'){
             $amount = $amount / 10;
 		}
@@ -241,50 +251,14 @@ class plgdjclassifiedspaymentdjcfNextpay extends JPlugin
 			$app->redirect($return, $message, 'error');
 			exit;
 		}
-		
-		/*$return_ok = JRoute::_(JURI::root().'index.php?option=com_djclassifieds&task=paymentReturn&r=ok&id='.$pdetails['item_id'].$pdetails['item_cid'].'&Itemid='.$Itemid);
-		if($this->params["return_ok"]){
-			$return_ok = $this->params["return_ok"];
-		}
-		
-		$return_cancel = JRoute::_(JURI::root().'index.php?option=com_djclassifieds&task=paymentReturn&r=error&id='.$pdetails['item_id'].$pdetails['item_cid'].'&Itemid='.$Itemid);
-		if($this->params["return_cancel"]){
-			$return_cancel = $this->params["return_cancel"];
-		}
-		
-		$form ='<form id="paypalform" action="'.$urlpaypal.'" method="post">';
-		$form .='<input type="hidden" name="cmd" value="_xclick">';
-		$form .='<input id="custom" type="hidden" name="custom" value="'.$pdetails['item_id'].'">';
-		$form .='<input type="hidden" name="business" value="'.$paypal_email.'">';
-		$form .='<input type="hidden" name="currency_code" value="'.$this->params["currency_code"].'">';
-		$form .='<input type="hidden" name="item_name" value="'.$pdetails['itemname'].'">';
-		$form .='<input type="hidden" name="amount" value="'.$pdetails['amount'].'">';
-		$form .='<input type="hidden" name="charset" value="utf-8">';		
-		if($this->params["image_url"]){
-			$form .='<input type="hidden" name="image_url" value="'.JURI::root().$this->params["image_url"].'">';
-			$form .='<input type="hidden" name="page_style" value="paypal" />';
-		}		
-		$form .='<input type="hidden" name="cancel_return" value="'.$return_cancel.'">';
-		$form .='<input type="hidden" name="notify_url" value="'.JRoute::_(JURI::root().'index.php?option=com_djclassifieds&task=processPayment&ptype='.$this->params["plugin_name"].'&pactiontype=notify&id='.$pdetails['item_id']).'">';
-		$form .='<input type="hidden" name="return" value="'.$return_ok.'">';
-		$form .='</form>';
-		echo $form;*/
-	?>
-		<script type="text/javascript">
-			callpayment()
-			function callpayment(){
-				var id = document.getElementById('custom').value ;
-				if ( id > 0 && id != '' ) {
-					document.getElementById('paypalform').submit();
-				}
-			}
-		</script>
-	<?php
+
 	}
 
 	function onPaymentMethodList($val)
-	{		
+	{
+	    
 		if($val["direct_payment"] && !$val["payment_email"]){
+			die("injam");
 			return null;
 		}
 		
@@ -293,7 +267,7 @@ class plgdjclassifiedspaymentdjcfNextpay extends JPlugin
 			$type='&type='.$val['type'];	
 		}		
 		$html ='';
-		if($this->params["email_id"]!=''){
+		if($this->params["api_key"]!=''){
 			$paymentLogoPath = JURI::root()."plugins/djclassifiedspayment/".$this->params["plugin_name"]."/".$this->params["plugin_name"]."/images/".$this->params["logo"];
 			//$form_action = JRoute :: _("index.php?option=com_djclassifieds&task=processPayment&ptype=".$this->params["plugin_name"]."&pactiontype=process&id=".$val["id"].$type, false);
 			$form_action = JURI::root()."index.php?option=com_djclassifieds&task=processPayment&ptype=".$this->params["plugin_name"]."&pactiontype=process&id=".$val["id"].$type;
@@ -305,7 +279,7 @@ class plgdjclassifiedspaymentdjcfNextpay extends JPlugin
 					</td>';
 					 }
 					$html .='<td class="td2">
-						<h2>PAYPAL</h2>
+						<h2>نکست پی</h2>
 						<p style="text-align:justify;">'.$this->params["description"].'</p>
 					</td>
 					<td class="td3" width="130" align="center">
